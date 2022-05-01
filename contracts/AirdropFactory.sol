@@ -12,6 +12,13 @@ contract AirdropFactory {
 
     IERC20 token;
 
+    /**
+     * Sends the tokens to several addresses by managing the provided gas
+     * @param addresses_ array of addresses
+     * @param amounts_ array of respective amounts in the address list
+     * @param token_ used to airdrop
+     * @param gas_ amount of gas used for the distribution of tokens
+     */
     function sendTokens(
         address[] memory addresses_,
         uint256[] memory amounts_,
