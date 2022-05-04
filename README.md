@@ -16,6 +16,10 @@ npx hardhat test
 
 ## Deploy contract
 
+```
+npx hardhat run --network <YOUR_NETWORK> script/deploy.js
+```
+
 Here is the list of the compatible networks:
 - Avalanche Fuji (TESTNET)
 - Avalanche (MAINNET)
