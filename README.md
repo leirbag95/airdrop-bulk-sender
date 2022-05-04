@@ -1,15 +1,46 @@
-# Basic Sample Hardhat Project
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, a sample script that deploys that contract, and an example of a task implementation, which simply lists the available accounts.
+# Get started with Hardhat
 
-Try running some of the following tasks:
+## Requirements
 
-```shell
-npx hardhat accounts
-npx hardhat compile
-npx hardhat clean
-npx hardhat test
-npx hardhat node
-node scripts/sample-script.js
-npx hardhat help
+Start by <a href="https://hardhat.org/tutorial/setting-up-the-environment.html" target="__blank"> installing hardhat on your local.</a>
+Hardhat is an Ethereum development environment. Compile your contracts and run them on a development network.
+
+Then install <a href="https://vuetifyjs.com/en/getting-started/installation/" target="__blank">vue + vuetify</a>.
+
+## Testing contract
+
 ```
+npx hardhat test
+```
+
+## Deploy contract
+
+Here is the list of the compatible networks:
+- Avalanche Fuji (TESTNET)
+- Avalanche (MAINNET)
+- Fantom Opera (MAINNET)
+- Binance Smart Chain (MAINNET)
+
+If you want to add a new network, open and edit `hardhat.config.js` and add it according to the following format:
+
+```
+networks: {
+    <name of you network>: {
+      url: "<rpc of your network>",
+      accounts: ["<List of private key>"...]
+    }
+  }
+```
+
+## Running client
+
+For running the front end on localhost:
+
+```
+cd client/
+npm install
+npm run serve
+```
+
+Then open (default) <a href="http://localhost:8080" target="__blank">http://localhost:8080</a>
