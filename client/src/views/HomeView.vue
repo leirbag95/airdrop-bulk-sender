@@ -6,9 +6,13 @@
       </v-stepper-step>
 
       <v-stepper-content step="1">
-        <v-card elevation="0" class="mb-12">
+        <v-card elevation="0" color="transparent">
           <v-card-actions>
-            <v-btn color="orange" class="white--text" @click="connect()" elevation="0">Metamask</v-btn>
+            <v-btn class="white--text" @click="connect()" elevation="0" large>
+              <v-avatar left size="30">
+                <v-img src="@/assets/metamask-fox.svg"></v-img>
+              </v-avatar> Metamask
+            </v-btn>
           </v-card-actions>
         </v-card>
       </v-stepper-content>
@@ -20,10 +24,10 @@
       </v-stepper-step>
 
       <v-stepper-content step="2">
-        <v-row>
-          <v-col cols="12" md="4">
-            <v-autocomplete v-model="airdrop.network" :items="networks" dense outlined label="Network"
-              item-text="chainName" item-value="item" return-object @change="(event) => switchNetwork(event)">
+        <v-row class="my-2">
+          <v-col cols="12" lg="4">
+            <v-autocomplete v-model="airdrop.network" :items="networks" outlined label="Network" item-text="chainName"
+              item-value="item" return-object @change="(event) => switchNetwork(event)">
               <template v-slot:selection="data">
                 <v-chip v-bind="data.attrs" :input-value="data.selected" close @click="data.select">
                   <v-avatar left size="10">
@@ -48,14 +52,16 @@
               </template>
             </v-autocomplete>
           </v-col>
-          <v-col cols="12" md="8">
+          <v-col cols="12" lg="8">
             <v-form ref="form" v-model="form.tokenAddr" lazy-validation>
-              <v-text-field name="tokenAddr" v-model="airdrop.token.address" outlined dense label="Token Address"
+              <v-text-field name="tokenAddr" v-model="airdrop.token.address" outlined label="Token Address"
                 :rules=[rules.evmAddress]></v-text-field>
             </v-form>
           </v-col>
         </v-row>
-
+        <v-alert v-show="alert.isError" dense outlined type="error">
+          {{alert.message}}
+        </v-alert>
         <v-card class="mx-2 mb-4" tile v-show="airdrop.token.name.length > 0">
           <v-list-item two-line>
             <v-list-item-content>
@@ -66,16 +72,17 @@
 
           <v-list-item two-line>
             <v-list-item-content>
-              <v-list-item-title><strong>Your balance</strong> {{airdrop.token.balance / 10**airdrop.token.decimals}}</v-list-item-title>
+              <v-list-item-title><strong>Your balance</strong> {{airdrop.token.balance / 10**airdrop.token.decimals}}
+              </v-list-item-title>
               <v-list-item-subtitle>Decimals: {{airdrop.token.decimals}}</v-list-item-subtitle>
             </v-list-item-content>
           </v-list-item>
         </v-card>
-        <v-btn color="primary" class="mx-2" :disabled="airdrop.token.address.length == 0 || !form.tokenAddr"
+        <v-btn color="primary" class="mr-2" :disabled="airdrop.token.address.length == 0 || !form.tokenAddr"
           @click="fetchTokenData(airdrop.token.address)" :loading="loading">
           Fetch data
         </v-btn>
-        <v-btn color="primary" @click="e6 = 3" :disabled="airdrop.token.name.length == 0">
+        <v-btn color="primary" class="mr-2" @click="e6 = 3" :disabled="airdrop.token.name.length == 0">
           Continue
         </v-btn>
         <v-btn text @click="e6 = 1">
@@ -83,17 +90,24 @@
         </v-btn>
       </v-stepper-content>
 
-      <v-stepper-step :complete="e6 > 3" step="3">
+      <v-stepper-step editable :complete="e6 > 3" step="3">
         Fill addresses and amounts to airdrop
       </v-stepper-step>
 
       <v-stepper-content step="3">
-        <v-card class="mb-12" elevation="0">
-          <v-textarea name="input-7-1" label="Your addresses" value="addresses,amounts" outlined></v-textarea>
-
+        <v-file-input v-model="airdrop.files" label="File input" class="my-2"
+          accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+          outlined dense>
+        </v-file-input>
+        <v-card class="my-2" v-show="addresses.length > 0">
+          <v-card-title>
+            <v-text-field v-model="search" append-icon="mdi-magnify" label="Search" single-line hide-details>
+            </v-text-field>
+          </v-card-title>
+          <v-data-table :headers="headers" :items="addresses" :search="search"></v-data-table>
         </v-card>
-        <v-btn color="primary" @click="e6 = 4">
-          Continue
+        <v-btn color="primary" @click="readAndShowTable()">
+          Import file
         </v-btn>
         <v-btn text>
           Cancel
@@ -118,16 +132,27 @@
 
 <script>
   import { ERC20 } from '@/services/contracts/ABIs/ERC20.json'
+  import { csvToArray } from '@/services/utils.js'
   import { ethers } from "ethers";
 
   export default {
     data() {
       return {
         loading: false,
+        search: '',
+        headers: [
+          { text: 'Addresses', align: 'start', filterable: true, value: 'addresses' },
+          { text: 'Amounts', filterable: true, value: 'amounts' }
+        ],
+        addresses: [],
         e6: 1,
         account: null,
         form: {
           tokenAddr: false
+        },
+        alert: {
+          isError: false,
+          message: ''
         },
         airdrop: {
           token: {
@@ -137,7 +162,8 @@
             balance: '',
             address: ''
           },
-          network: {}
+          network: {},
+          files: ''
         },
         rules: {
           evmAddress: (value) => {
@@ -192,10 +218,10 @@
         }
       },
 
-      async getCurrentNetwork () {
+      async getCurrentNetwork() {
         var BreakException = {};
         let currentNetwork = await window.ethereum.networkVersion
-        console.log(currentNetwork)
+
         this.networks.forEach(network => {
           if (network.decChainId == currentNetwork) {
             this.airdrop.network = network
@@ -204,10 +230,17 @@
         });
       },
 
+      /**
+       * fetch token information like name, symbol, balance of user or decimals.
+       * @param tokenAddr is the token to supply
+       */
       async fetchTokenData(tokenAddr) {
         this.loading = true
         const provider = new ethers.providers.Web3Provider(window.ethereum)
         const tokenContract = new ethers.Contract(tokenAddr, ERC20, provider);
+        // hide alert message
+        this.alert.isError = false
+        this.alert.message = ''
 
         try {
           this.airdrop.token.name = await tokenContract.name()
@@ -215,14 +248,25 @@
           this.airdrop.token.decimals = await tokenContract.decimals()
           this.airdrop.token.balance = await tokenContract.balanceOf(this.account)
         } catch (err) {
-          console.error(err)
+          this.alert.isError = true
+          this.alert.message = err
         }
+
         this.loading = false
+      },
+
+      readAndShowTable() {
+        const reader = new FileReader();
+        this.content = "check the console for file output";
+        reader.onload = (res) => {
+          this.addresses = csvToArray(res.target.result)
+        };
+        reader.onerror = (err) => console.log(err);
+        reader.readAsText(this.airdrop.files);
       }
     },
-
-    created () {
-        this.getCurrentNetwork()
+    created() {
+      this.getCurrentNetwork()
     }
   }
 </script>
