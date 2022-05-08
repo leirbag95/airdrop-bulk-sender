@@ -12,6 +12,7 @@ contract AirdropFactory {
 
     IERC20 token;
 
+    event AirdropSent(uint256 iterations, address indexed source);
     /**
      * Sends the tokens to several addresses by managing the provided gas
      * @param addresses_ array of addresses
@@ -40,6 +41,8 @@ contract AirdropFactory {
 
             gasLeft = newGasLeft;
         }
+        emit AirdropSent(iterations, msg.sender);
+        
         return iterations;
     }
 }
