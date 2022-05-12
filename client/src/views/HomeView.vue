@@ -82,7 +82,7 @@
           @click="fetchTokenData(airdrop.token.address)" :loading="loading">
           Fetch data
         </v-btn>
-        <v-btn color="primary" class="mr-2" @click="e6 = 3" :disabled="airdrop.token.name.length == 0">
+        <v-btn color="primary" class="mr-2" @click="e6 = 3" :disabled="airdrop.token.balance == 0">
           Continue
         </v-btn>
         <v-btn text @click="e6 = 1">
@@ -127,7 +127,7 @@
         <v-btn color="primary" @click="hasAllowed()">
           Continue
         </v-btn>
-        <v-btn text>
+        <v-btn text @click="e6 = 2">
           Cancel
         </v-btn>
       </v-stepper-content>
@@ -147,31 +147,39 @@
         <v-btn color="primary" @click="approve()" class="mr-2" :loading="loading" :disabled="loading">
           Approve
         </v-btn>
-        <v-btn text>
+        <v-btn color="primary" @click="e6 = 5" class="mr-2" :loading="loading" :disabled="loading || airdrop.token.spendLimit == 0">
+          Continue
+        </v-btn>
+        <v-btn text @click="e6 = 3">
           Cancel
         </v-btn>
       </v-stepper-content>
 
-      <v-stepper-step step="5">
+      <v-stepper-step step="5" editable>
         Send Tokens
       </v-stepper-step>
       <v-stepper-content step="5">
-        <v-card elevation="0" class="mx-2" color="transparent">
+        <v-card elevation="0" class="my-2" color="transparent">
           <v-alert v-show="alert.isError" dense outlined type="error">
             {{alert.message}}
           </v-alert>
-          <div class="mx-2">
-            <span>Number of transfers: {{airdrop.progress.iterations}}</span>
-          </div>
-          <div class="mx-2">
-            <span>Remaining address to be processed: {{this.addresses.length}}</span>
-          </div>
           <div class="my-2">
             <v-text-field
               label="Gas Distribution"
               v-model="airdrop.progress.gasDistribution"
               outlined
             ></v-text-field>
+          </div>
+          <div class="mx-2">
+            <span class="text-caption">Remaining address to be processed: <strong>{{addresses.length - airdrop.progress.iterations}} / {{addresses.length}}</strong></span>
+          </div>
+          <div>
+            <v-progress-linear
+              v-model="getRemainingAddressesProgress"
+              height="25"
+            >
+              <strong>{{ Math.ceil(getRemainingAddressesProgress) }}%</strong>
+            </v-progress-linear>
           </div>
         </v-card>
         <v-btn color="primary" @click="sendTokens()" class="mr-2" :loading="loading" :disabled="loading">
@@ -239,11 +247,15 @@
           { chainName: 'Avalanche Fuji Testnet', chainId: "0xA869", decChainId: 43113, rpcUrls: 'https://api.avax-test.network/ext/bc/C/rpc', 'icon': require('@/assets/avalanche-avax-logo.svg'), currency: 'AVAX', decimals: 18 },
           { chainName: 'Binance Smart Chain', chainId: "0x38", decChainId: 56, rpcUrls: 'https://bsc-dataseed2.binance.org', 'icon': require('@/assets/bnb-bnb-logo.svg'), currency: 'BNB', decimals: 18 },
           { chainName: 'Ethereum', chainId: "0x1", decChainId: 1, rpcUrls: 'https://rpc.ankr.com/eth', 'icon': require('@/assets/ethereum-eth-logo.svg'), currency: 'ETH', decimals: 18 },
-          { chainName: 'Fantom Opera', chainId: "0xFA", decChainId: 250, rpcUrls: 'https://rpc.fantom.network', 'icon': require('@/assets/fantom-ftm-logo.svg'), currency: 'FTM', decimals: 18 }
+          { chainName: 'Fantom Opera', chainId: "0xFA", decChainId: 250, rpcUrls: 'https://rpc.fantom.network', 'icon': require('@/assets/fantom-ftm-logo.svg'), currency: 'FTM', decimals: 18 },
+          { chainName: 'Fantom Tesnet', chainId: "0xFA2", decChainId: 4002, rpcUrls: 'https://rpc.testnet.fantom.network', 'icon': require('@/assets/fantom-ftm-logo.svg'), currency: 'FTM', decimals: 18 }
         ]
       }
     },
     computed: {
+      getRemainingAddressesProgress () {
+        return ((this.addresses.length - this.airdrop.progress.iterations) / this.addresses.length) * 100
+      }
     },
     methods: {
       async connect () {
@@ -313,6 +325,7 @@
           this.airdrop.token.symbol = await tokenContract.symbol()
           this.airdrop.token.decimals = await tokenContract.decimals()
           this.airdrop.token.balance = await tokenContract.balanceOf(this.account)
+          this.airdrop.token.spendLimit = await tokenContract.allowance(this.account, AirdropFactoryContractAddress)
         } catch (err) {
           this.alert.isError = true
           this.alert.message = err
@@ -333,28 +346,34 @@
         this.loading = false
       },
 
-      approve () {
+      async approve () {
         this.loading = true
         const provider = new ethers.providers.Web3Provider(window.ethereum)
         const tokenContract = new ethers.Contract(this.airdrop.token.address, ERC20, provider);
         const signer = provider.getSigner()
         const accountSigner = tokenContract.connect(signer);
         try {
-          accountSigner.approve(AirdropFactoryContractAddress, this.airdrop.token.spendLimit)
+           await accountSigner.approve(AirdropFactoryContractAddress, this.airdrop.token.spendLimit)
         } catch (err) {
-          console.error(err)
+          this.alert.isError = true
+          this.alert.message = err.message
         }
-        this.e6 += 1
-        this.loading = false
+        tokenContract.on("Approval", (owner, spender, value) => {
+          console.log(owner, spender, value)
+            if (ethers.utils.getAddress(owner) == ethers.utils.getAddress(this.account)) {
+              this.loading = false 
+              this.e6 = 6
+            }
+        });
       },
 
       async hasAllowed () {
         const provider = new ethers.providers.Web3Provider(window.ethereum)
         const tokenContract = new ethers.Contract(this.airdrop.token.address, ERC20, provider);
         if (await tokenContract.allowance(this.account, AirdropFactoryContractAddress) > 0) {
-          this.e6 += 1
+          this.e6 = 6
         }
-        this.e6 += 1
+        this.e6 = 5
       },
 
       async sendTokens () {
@@ -378,6 +397,7 @@
           console.log('tx', err)
           this.alert.isError = true
           this.alert.message = err.message
+          this.loading = false
         }
         AirdropFactoryContract.on("AirdropSent", (to, from, value) => {
             if (ethers.utils.getAddress(from) == ethers.utils.getAddress(this.account)) {

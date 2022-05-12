@@ -32,7 +32,11 @@ module.exports = {
       accounts: [process.env.PRIVATE_KEY]
     },
     fantom: {
-      url: "https://rpc.fantom.network",
+      url: "https://rpc.ftm.tools",
+      accounts: [process.env.PRIVATE_KEY]
+    },
+    fantomTestnet: {
+      url: "https://rpc.testnet.fantom.network",
       accounts: [process.env.PRIVATE_KEY]
     },
     bsc: {
