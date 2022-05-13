@@ -1,7 +1,25 @@
 <template>
   <v-container>
-    <v-stepper v-model="e6" vertical editable outlined>
-      <v-stepper-step :complete="e6 > 1" step="1">
+    <v-snackbar
+    color="green"
+      v-model="txAlert.snackbar"
+      :timeout="txAlert.timeout"
+    >
+      {{ txAlert.message }}
+
+      <template v-slot:action="{ attrs }">
+        <v-btn
+          color="white"
+          text
+          v-bind="attrs"
+          @click="txAlert.snackbar = false"
+        >
+          Close
+        </v-btn>
+      </template>
+    </v-snackbar>
+    <v-stepper v-model="e6" vertical outlined>
+      <v-stepper-step :complete="e6 > 1" step="1" editable>
         Connect you wallet
       </v-stepper-step>
 
@@ -171,18 +189,18 @@
             ></v-text-field>
           </div>
           <div class="mx-2">
-            <span class="text-caption">Remaining address to be processed: <strong>{{addresses.length - airdrop.progress.iterations}} / {{addresses.length}}</strong></span>
+            <span class="text-caption">Addresses processed: <strong>{{airdrop.progress.iterations}} / {{addresses.length}}</strong></span>
           </div>
           <div>
             <v-progress-linear
-              v-model="getRemainingAddressesProgress"
+              :value="getRemainingAddressesProgress"
               height="25"
             >
               <strong>{{ Math.ceil(getRemainingAddressesProgress) }}%</strong>
             </v-progress-linear>
           </div>
         </v-card>
-        <v-btn color="primary" @click="sendTokens()" class="mr-2" :loading="loading" :disabled="loading">
+        <v-btn color="primary" @click="sendTokens()" class="mr-2" :loading="loading" :disabled="loading || airdrop.progress.iterations >= addresses.length">
           Send tokens
         </v-btn>
         <v-btn text>
@@ -198,6 +216,7 @@
   import { AirdropFactory } from '@/services/contracts/ABIs/AirdropFactory.json'
   import { AirdropFactoryContractAddress } from '@/services/contracts/addresses.json'
   import { csvToArray } from '@/services/utils.js'
+  import { networks } from '@/services/networks.js'
   import { ethers } from "ethers";
 
   export default {
@@ -242,19 +261,20 @@
             return pattern.test(value) && !!value || "Wrong address format.";
           }
         },
-        networks: [
-          { chainName: 'Avalanche', chainId: "0xA86A", decChainId: 43114, rpcUrls: 'https://api.avax.network/ext/bc/C/rpc', 'icon': require('@/assets/avalanche-avax-logo.svg'), currency: 'AVAX', decimals: 18 },
-          { chainName: 'Avalanche Fuji Testnet', chainId: "0xA869", decChainId: 43113, rpcUrls: 'https://api.avax-test.network/ext/bc/C/rpc', 'icon': require('@/assets/avalanche-avax-logo.svg'), currency: 'AVAX', decimals: 18 },
-          { chainName: 'Binance Smart Chain', chainId: "0x38", decChainId: 56, rpcUrls: 'https://bsc-dataseed2.binance.org', 'icon': require('@/assets/bnb-bnb-logo.svg'), currency: 'BNB', decimals: 18 },
-          { chainName: 'Ethereum', chainId: "0x1", decChainId: 1, rpcUrls: 'https://rpc.ankr.com/eth', 'icon': require('@/assets/ethereum-eth-logo.svg'), currency: 'ETH', decimals: 18 },
-          { chainName: 'Fantom Opera', chainId: "0xFA", decChainId: 250, rpcUrls: 'https://rpc.fantom.network', 'icon': require('@/assets/fantom-ftm-logo.svg'), currency: 'FTM', decimals: 18 },
-          { chainName: 'Fantom Tesnet', chainId: "0xFA2", decChainId: 4002, rpcUrls: 'https://rpc.testnet.fantom.network', 'icon': require('@/assets/fantom-ftm-logo.svg'), currency: 'FTM', decimals: 18 }
-        ]
+        txAlert: {
+          message: '',
+          snackbar: false,
+          timeout: 50000
+        }
       }
     },
     computed: {
       getRemainingAddressesProgress () {
-        return ((this.addresses.length - this.airdrop.progress.iterations) / this.addresses.length) * 100
+        return ((this.airdrop.progress.iterations) / this.addresses.length) * 100
+      },
+
+      networks () {
+        return networks
       }
     },
     methods: {
@@ -299,8 +319,7 @@
       async getCurrentNetwork () {
         var BreakException = {};
         let currentNetwork = await window.ethereum.networkVersion
-
-        this.networks.forEach(network => {
+        networks.forEach(network => {
           if (network.decChainId == currentNetwork) {
             this.airdrop.network = network
             throw BreakException;
@@ -325,7 +344,8 @@
           this.airdrop.token.symbol = await tokenContract.symbol()
           this.airdrop.token.decimals = await tokenContract.decimals()
           this.airdrop.token.balance = await tokenContract.balanceOf(this.account)
-          this.airdrop.token.spendLimit = await tokenContract.allowance(this.account, AirdropFactoryContractAddress)
+          console.log(this.airdrop.network)
+          this.airdrop.token.spendLimit = await tokenContract.allowance(this.account, AirdropFactoryContractAddress[this.airdrop.network.chainId])
         } catch (err) {
           this.alert.isError = true
           this.alert.message = err
@@ -353,7 +373,7 @@
         const signer = provider.getSigner()
         const accountSigner = tokenContract.connect(signer);
         try {
-           await accountSigner.approve(AirdropFactoryContractAddress, this.airdrop.token.spendLimit)
+           await accountSigner.approve(AirdropFactoryContractAddress[this.airdrop.network.chainId], this.airdrop.token.spendLimit)
         } catch (err) {
           this.alert.isError = true
           this.alert.message = err.message
@@ -370,7 +390,7 @@
       async hasAllowed () {
         const provider = new ethers.providers.Web3Provider(window.ethereum)
         const tokenContract = new ethers.Contract(this.airdrop.token.address, ERC20, provider);
-        if (await tokenContract.allowance(this.account, AirdropFactoryContractAddress) > 0) {
+        if (await tokenContract.allowance(this.account, AirdropFactoryContractAddress[this.airdrop.network.chainId]) > 0) {
           this.e6 = 6
         }
         this.e6 = 5
@@ -380,6 +400,7 @@
         this.loading = true
         var addresses = []
         var amounts = []
+        var airdropSentEvent = null
         var iterations = this.airdrop.progress.iterations
         
         while (iterations < this.addresses.length) {
@@ -387,29 +408,21 @@
           amounts.push(String(this.addresses[iterations][this.headers[1].value]).replace(/ /g, ''))
           iterations += 1;
         }
-        const AirdropFactoryContract = new ethers.Contract(AirdropFactoryContractAddress, AirdropFactory, this.provider);
+        const AirdropFactoryContract = new ethers.Contract(AirdropFactoryContractAddress[this.airdrop.network.chainId], AirdropFactory, this.provider);
         const signer = this.provider.getSigner()
         const accountSigner = AirdropFactoryContract.connect(signer);
         try {
           const tx = await accountSigner.sendTokens(addresses,amounts, this.airdrop.token.address, this.airdrop.progress.gasDistribution)
-          console.log('tx', tx)
+          const recep = await tx.wait(1)
+          airdropSentEvent = recep['events'].pop();
+          this.txAlert.message = `Transaction confirmed: ${recep.blockHash}`
+          this.txAlert.snackbar = true
         } catch (err) {
-          console.log('tx', err)
           this.alert.isError = true
           this.alert.message = err.message
-          this.loading = false
         }
-        AirdropFactoryContract.on("AirdropSent", (to, from, value) => {
-            if (ethers.utils.getAddress(from) == ethers.utils.getAddress(this.account)) {
-              this.airdrop.progress.iterations = parseInt(value.args[0])
-              console.log("count", parseInt(value.args[0]))
-              for (var i = 0; i < parseInt(value.args[0]); i++) {
-                console.log(this.addresses.length)
-                this.addresses.shift()
-              }
-            }
-            this.loading = false
-        });
+        this.loading = false
+        this.airdrop.progress.iterations += parseInt(airdropSentEvent.args[0])
       }
     },
     created() {

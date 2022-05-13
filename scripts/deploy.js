@@ -15,11 +15,18 @@ async function main() {
 
   // We get the contract to deploy
   const AirdropFactory = await hre.ethers.getContractFactory("AirdropFactory");
+  const AirdropHistory = await hre.ethers.getContractFactory("AirdropHistory");
+  
   const airdropFactory = await AirdropFactory.deploy();
-
   await airdropFactory.deployed();
 
+  const airdropHistory = await AirdropHistory.deploy(airdropFactory.address);
+  await airdropFactory.deployed();
+
+  await airdropFactory.setAirdropHistory(airdropHistory.address);
+
   console.log("AirdropFactory deployed to:", airdropFactory.address);
+  console.log("AirdropHistory deployed to:", airdropHistory.address);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

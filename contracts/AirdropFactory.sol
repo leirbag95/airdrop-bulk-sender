@@ -4,13 +4,16 @@ pragma solidity ^0.8.0;
 import "hardhat/console.sol";
 import "./IERC20.sol";
 import "./SafeMath.sol";
+import './AirdropHistory.sol';
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract AirdropFactory {
+contract AirdropFactory is Ownable {
     using SafeMath for uint256;
     
     uint256 immutable public gasForDistribution = 300000;
 
     IERC20 token;
+    AirdropHistory airdropHistory;
 
     event AirdropSent(uint256 iterations, address indexed source);
     /**
@@ -42,7 +45,9 @@ contract AirdropFactory {
             gasLeft = newGasLeft;
         }
         emit AirdropSent(iterations, msg.sender);
-        
-        return iterations;
+    }
+
+    function setAirdropHistory(AirdropHistory _airdropHistory) external onlyOwner {
+        airdropHistory = _airdropHistory;
     }
 }

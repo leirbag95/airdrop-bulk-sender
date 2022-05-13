@@ -1,3 +1,5 @@
 {
-    "AirdropFactoryContractAddress": ""
+    "AirdropFactoryContractAddress": {
+        "0xA869": "0xD065b1e9737c9b614a4b464a1525A3f817C6C74D"
+    } 
 }
