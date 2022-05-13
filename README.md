@@ -29,12 +29,19 @@ npx hardhat run --network <YOUR_NETWORK> script/deploy.js
 ```
 
 Here is the list of the compatible networks:
-- Avalanche Fuji (TESTNET)
-- Avalanche (MAINNET)
-- Fantom Opera (MAINNET)
-- Binance Smart Chain (MAINNET)
+| Network Name | Chain ID | RPC |
+| :---: | :---: | :---: |
+| Avalanche | 0xA86A | https://api.avax.network/ext/bc/C/rpc |
+| Avalanche Fuji Testnet | 0xA869 | https://api.avax-test.network/ext/bc/C/rpc |
+| Binance Smart Chain | 0x38 | https://bsc-dataseed2.binance.org |
+| Ethereum | 0x1 | https://rpc.ankr.com/eth |
+| Fantom Opera | 0xFA | https://rpc.fantom.network |
+| Fantom Tesnet | 0xFA2 | https://rpc.testnet.fantom.network |
 
-If you want to add a new network, open and edit `hardhat.config.js` and add it according to the following format:
+
+If you want to add and deploy protocol on a new network:
+
+1. open and edit `hardhat.config.js` and add it according to the following format:
 
 ```
 networks: {
@@ -43,6 +50,21 @@ networks: {
       accounts: ["<List of private key>"...]
     }
   }
+```
+
+2. edit `/services/networks.json` and add data (I fetched network data from <a href="chainlist.org" target="_blank">chainlist.org</a>)
+3. edit `/services/contracts/addresses.json` and add your deployed contract like the following format:
+
+```
+{
+    "AirdropFactoryContractAddress": {
+        "0x000": "0x000...00",
+        ...
+        "<YOUR CHAIN ID IN HEX>": "<CONTRACT ADDRESS>",
+        ...
+        "0x001": "0x000...01",
+    } 
+}
 ```
 
 ## Running client
