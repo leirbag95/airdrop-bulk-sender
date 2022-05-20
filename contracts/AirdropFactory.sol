@@ -12,10 +12,12 @@ contract AirdropFactory is Ownable {
     
     uint256 immutable public gasForDistribution = 300000;
 
-    IERC20 token;
-    AirdropHistory airdropHistory;
-
+    IERC20 public token;
+    AirdropHistory public airdropHistory;
+ 
     event AirdropSent(uint256 iterations, address indexed source);
+
+    // is it more expensive to define an array of arrays?
     /**
      * Sends the tokens to several addresses by managing the provided gas
      * @param addresses_ array of addresses
@@ -27,7 +29,7 @@ contract AirdropFactory is Ownable {
         address[] memory addresses_,
         uint256[] memory amounts_,
         IERC20 token_,
-        uint256 gas_) external returns(uint256) {
+        uint256 gas_) external {
         require(addresses_.length == amounts_.length, "Array must have the same length.");
         uint256 gasUsed = 0;
         uint256 gasLeft = gasleft();
