@@ -1,5 +1,5 @@
-import { waffle } from "hardhat";
-import ERC_20_ABI from "../../abis/erc20.abi.json";
+const { waffle } = require("hardhat");
+const ERC_20_ABI = require("../../abis/erc20.abi.json");
 
 async function deployMockUsdc(deployer) {
   const erc20 = await waffle.deployMockContract(

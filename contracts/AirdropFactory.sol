@@ -10,8 +10,8 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract AirdropFactory is Ownable {
     using SafeMath for uint256;
     
-    uint256 immutable public gasForDistribution = 300000;
-
+    uint256 public immutable gasForDistribution = 300000;
+ 
     IERC20 public token;
     AirdropHistory public airdropHistory;
  

@@ -18,20 +18,29 @@ const airdropFactoryTest = () => {
                 const deployer = this.signers.deployer;
                 await this.airdropFactory
                     .connect(deployer)
-                    .setAirdropHistory(this.airdropHistory.address);
+                     .setAirdropHistory(this.airdropHistory.address);
     
                 expect(await this.airdropFactory.airdropHistory())
                     .to.equal(this.airdropHistory.address);
             })
         })
 
-        // describe('should send tokens', async function() {
-        //     const deployer = this.signers.deployer;
-        //     const token = this.token;
-        //     const gas = parseEther('1');
+        describe('should send tokens', async function() {
+            it('should fail if account does not match array', async function() {
+                const deployer = this.signers.deployer;
+                const token = this.mockToken;
+                const gas = parseEther('1');
 
-        //     await 
-        // })
+                await expect(
+                    this.airdropFactory.sendTokens(
+                        [deployer.address],
+                        [1000, 1000],
+                        token.address,
+                        gas
+                    )
+                ).to.be.revertedWith('Array must have the same length.')
+            })
+        })
     })
 }
 

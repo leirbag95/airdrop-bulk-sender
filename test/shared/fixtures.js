@@ -1,5 +1,5 @@
 const { ethers } = require("hardhat");
-const { deployMockUsDc } = require('./erc20-mock');
+const { deployMockUsdc } = require("./erc20-mock");
 
 const airdropFixture = async (
   signers
@@ -18,7 +18,7 @@ const airdropFixture = async (
   const history = await historyFactory.connect(deployer).deploy(airdrop.address);
 
   await airdrop.deployed();
-  const erc20 = await deployMockUsDc(deployer);
+  const erc20 = await deployMockUsdc(deployer);
 
   return { airdropFactory: airdrop, erc20, airdropHistory: history };
 };
